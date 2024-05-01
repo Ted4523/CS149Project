@@ -10,6 +10,7 @@
 #include <sys/wait.h> // for wait()
 #include <unistd.h> // for pipe(), read(), write(), close(), fork(), and _exit()
 #include <vector> // for vector (used for PCB table)
+
 using namespace std;
 class Instruction {
 public:
@@ -95,9 +96,7 @@ bool createProgram(const string &filename, vector<Instruction> &program)
                 // Note that since the string is trimmed on both ends, filenames
                 // with leading or trailing whitespace (unlikely) will not work.
                     if (instruction.stringArg.size() == 0) {
-                    cout << filename << ":" << lineNum << " -
-                    Missing string argument"
-                    << endl;
+                    cout << filename << ":" << lineNum << " - Missing string argument" << endl;
                     file.close();
                     return false;
                     }
@@ -312,14 +311,12 @@ int main(int argc, char *argv[])
     int result;
     //TODO: Create a pipe
 pipe(pipeDescriptors);
-//USE fork() SYSTEM CALL to create the child process and save the
-value returned in processMgrPid variable
-if((processMgrPid = fork()) == -1) exit(1); /* FORK FAILED */
+//USE fork() SYSTEM CALL to create the child process and save the value returned in processMgrPid variable
+if ((processMgrPid = fork()) == -1) exit(1); /* FORK FAILED */
 if (processMgrPid == 0)
 {
 // The process manager process is running.
-// Close the unused write end of the pipe for the process manager
-process.
+// Close the unused write end of the pipe for the process manager process.
 close(pipeDescriptors[1]);
 // Run the process manager.
 result = runProcessManager(pipeDescriptors[0]);
