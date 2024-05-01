@@ -1,24 +1,26 @@
 
-#include <cctype> // for toupper()
-#include <cstdlib> // for EXIT_SUCCESS and EXIT_FAILURE
-#include <cstring> // for strerror()
-#include <cerrno> // for errno
-#include <deque> // for deque (used for ready and blocked queues)
-#include <fstream> // for ifstream (used for reading simulated programs)
-#include <iostream> // for cout, endl, and cin
-#include <sstream> // for stringstream (used for parsing simulated programs)
+#include <cctype>     // for toupper()
+#include <cstdlib>    // for EXIT_SUCCESS and EXIT_FAILURE
+#include <cstring>    // for strerror()
+#include <cerrno>     // for errno
+#include <deque>      // for deque (used for ready and blocked queues)
+#include <fstream>    // for ifstream (used for reading simulated programs)
+#include <iostream>   // for cout, endl, and cin
+#include <sstream>    // for stringstream (used for parsing simulated programs)
 #include <sys/wait.h> // for wait()
-#include <unistd.h> // for pipe(), read(), write(), close(), fork(), and _exit()
-#include <vector> // for vector (used for PCB table)
+#include <unistd.h>   // for pipe(), read(), write(), close(), fork(), and _exit()
+#include <vector>     // for vector (used for PCB table)
 
 using namespace std;
-class Instruction {
+class Instruction
+{
 public:
     char operation;
     int intArg;
     string stringArg;
 };
-class Cpu {
+class Cpu
+{
 public:
     vector<Instruction> *pProgram;
     int programCounter;
@@ -26,12 +28,14 @@ public:
     int timeSlice;
     int timeSliceUsed;
 };
-enum State {
+enum State
+{
     STATE_READY,
     STATE_RUNNING,
     STATE_BLOCKED
 };
-class PcbEntry {
+class PcbEntry
+{
 public:
     int processId;
     int parentProcessId;
@@ -61,97 +65,133 @@ bool createProgram(const string &filename, vector<Instruction> &program)
     ifstream file;
     int lineNum = 0;
     file.open(filename.c_str());
-    if (!file.is_open()) {
-    cout << "Error opening file " << filename << endl;
-    return false;
+    if (!file.is_open())
+    {
+        cout << "Error opening file " << filename << endl;
+        return false;
     }
-    while (file.good()) {
+    while (file.good())
+    {
         string line;
         getline(file, line);
         trim(line);
-        if (line.size() > 0) {
+        if (line.size() > 0)
+        {
             Instruction instruction;
             instruction.operation = toupper(line[0]);
             instruction.stringArg = trim(line.erase(0, 1));
             stringstream argStream(instruction.stringArg);
-            switch (instruction.operation) {
-                case 'S': // Integer argument.
-                case 'A': // Integer argument.
-                case 'D': // Integer argument.
-                case 'F': // Integer argument.
-                    if (!(argStream >> instruction.intArg)) {
+            switch (instruction.operation)
+            {
+            case 'S': // Integer argument.
+            case 'A': // Integer argument.
+            case 'D': // Integer argument.
+            case 'F': // Integer argument.
+                if (!(argStream >> instruction.intArg))
+                {
                     cout << filename << ":" << lineNum
-                    << " - Invalid integer argument "
-                    << instruction.stringArg << " for "
-                    << instruction.operation << " operation"
-                    << endl;
+                         << " - Invalid integer argument "
+                         << instruction.stringArg << " for "
+                         << instruction.operation << " operation"
+                         << endl;
                     file.close();
                     return false;
-                    }
-                    break;
-                case 'B': // No argument.
-                case 'E': // No argument.
-                    break;
-                case 'R': // String argument.
-                // Note that since the string is trimmed on both ends, filenames
-                // with leading or trailing whitespace (unlikely) will not work.
-                    if (instruction.stringArg.size() == 0) {
+                }
+                break;
+            case 'B': // No argument.
+            case 'E': // No argument.
+                break;
+            case 'R': // String argument.
+                      // Note that since the string is trimmed on both ends, filenames
+                      // with leading or trailing whitespace (unlikely) will not work.
+                if (instruction.stringArg.size() == 0)
+                {
                     cout << filename << ":" << lineNum << " - Missing string argument" << endl;
                     file.close();
                     return false;
-                    }
-                    break;
-                default:
-                    cout << filename << ":" << lineNum << " - Invalid operation, "
-                        << instruction.operation << endl;
-                    file.close();
-                    return false;
+                }
+                break;
+            default:
+                cout << filename << ":" << lineNum << " - Invalid operation, "
+                     << instruction.operation << endl;
+                file.close();
+                return false;
             }
             program.push_back(instruction);
-         }
+        }
         lineNum++;
-    }   
+    }
     file.close();
     return true;
 }
 // Implements the S operation.
 void set(int value)
 {
+
     // TODO: Implement
     // 1. Set the CPU value to the passed-in value.
+    cpu.value = value;
+
+
 }
 // Implements the A operation.
 void add(int value)
 {
     // TODO: Implement
     // 1. Add the passed-in value to the CPU value.
+    cpu.value += value;
+
 }
 // Implements the D operation.
 void decrement(int value)
 {
     // TODO: Implement
     // 1. Subtract the integer value from the CPU value.
+    cpu.value -= value;
 }
 // Performs scheduling.
 void schedule()
 {
     // TODO: Implement
     // 1. Return if there is still a processing running (runningState != -1). There is no need to schedule if a process is already running (at least until iLab 3)
-   // 2. Get a new process to run, if possible, from the ready queue.
-   // 3. If we were able to get a new process to run:
-   // a. Mark the processing as running (update the new process's PCB state)
-   // b. Update the CPU structure with the PCB entry details(program, program counter, // value, etc.)
+    if (runningState != -1)
+    {
+        return;
+    }
+    // 2. Get a new process to run, if possible, from the ready queue.
+    if (!readyState.empty())
+    {
+        // a. Remove the front of the ready queue.
+        int pcbIndex = readyState.front();
+        readyState.pop_front();
+        // b. Update the running state to the PCB index of the new process.
+        pcbEntry[pcbIndex].state = STATE_RUNNING;
+        // c. Update the process's PCB entry to running.
+
+        runningState = pcbIndex;
+
+        // c. Update the process's PCB entry to running.
+        cpu.pProgram = &(pcbEntry[pcbIndex].program);
+        // d. Update the CPU structure with the PCB entry details (program, program counter, value, etc.)
+        cpu.programCounter = pcbEntry[pcbIndex].programCounter;
+        cpu.value = pcbEntry[pcbIndex].value;
+        
+    }
+    // 3. If we were able to get a new process to run:
+    // a. Mark the processing as running (update the new process's PCB state)
+    // b. Update the CPU structure with the PCB entry details(program, program counter, // value, etc.)
 }
 // Implements the B operation.
 void block()
 {
     // TODO: Implement
     // 1. Add the PCB index of the running process (stored in runningState) to the blocked queue.
+
     // 2. Update the process's PCB entry
     // a. Change the PCB's state to blocked.
     // b. Store the CPU program counter in the PCB's program counter.
     // c. Store the CPU's value in the PCB's value.
-    // 3. Update the running state to -1 (basically mark no process as running). Note that a new process will be chosen to run later 
+    // 3. Update the running state to -1 (basically mark no process as running). Note that a new process will be chosen to run later
     // (via theQ command code calling the schedule() function).
 }
 // Implements the E operation.
@@ -195,48 +235,54 @@ void replace(string &argument)
     // error, incremented the cpu program counter and then returned. Note
     // that createProgram can fail if the file could not be opened or did not exist.
     // 3. Set the program counter to 0.
+
 }
 // Implements the Q command.
 void quantum()
 {
     Instruction instruction;
     cout << "In quantum";
-    if (runningState == -1) {
+    if (runningState == -1)
+    {
         cout << "No processes are running" << endl;
         ++timestamp;
         return;
     }
-    if (cpu.programCounter < cpu.pProgram->size()) {
+    if (cpu.programCounter < cpu.pProgram->size())
+    {
         instruction = (*cpu.pProgram)[cpu.programCounter];
         ++cpu.programCounter;
-    } else {
+    }
+    else
+    {
         cout << "End of program reached without E operation" << endl;
         instruction.operation = 'E';
     }
-    switch (instruction.operation) {
-        case 'S':
-            set(instruction.intArg);
-            cout << "instruction S " << instruction.intArg << endl;
-            break;
-        case 'A':
-            add(instruction.intArg);
-            cout << "instruction A " << instruction.intArg << endl;
-            break;
-        case 'D':
-            decrement(instruction.intArg);
-            break;
-        case 'B':
-            block();
-            break;
-        case 'E':
-            end();
-            break;
-        case 'F':
-            fork(instruction.intArg);
-            break;
-        case 'R':
-            replace(instruction.stringArg);
-            break;
+    switch (instruction.operation)
+    {
+    case 'S':
+        set(instruction.intArg);
+        cout << "instruction S " << instruction.intArg << endl;
+        break;
+    case 'A':
+        add(instruction.intArg);
+        cout << "instruction A " << instruction.intArg << endl;
+        break;
+    case 'D':
+        decrement(instruction.intArg);
+        break;
+    case 'B':
+        block();
+        break;
+    case 'E':
+        end();
+        break;
+    case 'F':
+        fork(instruction.intArg);
+        break;
+    case 'R':
+        replace(instruction.stringArg);
+        break;
     }
     ++timestamp;
     schedule();
@@ -259,10 +305,11 @@ void print()
 // Function that implements the process manager.
 int runProcessManager(int fileDescriptor)
 {
-//vector<PcbEntry> pcbTable;
-// Attempt to create the init process.
-    if (!createProgram("init", pcbEntry[0].program)) {
-    return EXIT_FAILURE;
+    // vector<PcbEntry> pcbTable;
+    //  Attempt to create the init process.
+    if (!createProgram("init", pcbEntry[0].program))
+    {
+        return EXIT_FAILURE;
     }
     pcbEntry[0].processId = 0;
     pcbEntry[0].parentProcessId = -1;
@@ -280,14 +327,17 @@ int runProcessManager(int fileDescriptor)
     double avgTurnaroundTime = 0;
     // Loop until a 'T' is read, then terminate.
     char ch;
-    do {
-    // Read a command character from the pipe.
-    if (read(fileDescriptor, &ch, sizeof(ch)) != sizeof(ch)) {
-    // Assume the parent process exited, breaking the pipe.
-    break;
-    }
-//TODO: Write a switch statement
-    switch (ch) {
+    do
+    {
+        // Read a command character from the pipe.
+        if (read(fileDescriptor, &ch, sizeof(ch)) != sizeof(ch))
+        {
+            // Assume the parent process exited, breaking the pipe.
+            break;
+        }
+        // TODO: Write a switch statement
+        switch (ch)
+        {
         case 'Q':
             quantum();
             break;
@@ -297,57 +347,59 @@ int runProcessManager(int fileDescriptor)
         case 'P':
             cout << "You entered P" << endl;
             break;
-    default:
+        default:
             cout << "You entered an invalid character!" << endl;
-    }
-    }while (ch != 'T');
+        }
+    } while (ch != 'T');
     return EXIT_SUCCESS;
-    }
+}
 int main(int argc, char *argv[])
 {
     int pipeDescriptors[2];
     pid_t processMgrPid;
     char ch;
     int result;
-    //TODO: Create a pipe
-pipe(pipeDescriptors);
-//USE fork() SYSTEM CALL to create the child process and save the value returned in processMgrPid variable
-if ((processMgrPid = fork()) == -1) exit(1); /* FORK FAILED */
-if (processMgrPid == 0)
-{
-// The process manager process is running.
-// Close the unused write end of the pipe for the process manager process.
-close(pipeDescriptors[1]);
-// Run the process manager.
-result = runProcessManager(pipeDescriptors[0]);
-// Close the read end of the pipe for the process manager process (for
-// cleanup purposes).
-close(pipeDescriptors[0]);
-_exit(result);
-}
-else {
-// The commander process is running.
-// Close the unused read end of the pipe for the commander process.
-close(pipeDescriptors[0]);
-// Loop until a 'T' is written or until the pipe is broken.
-do {
-cout << "Enter Q, P, U or T" << endl;
-cout << "$ ";
-cin >> ch ;
-// Pass commands to the process manager process via the pipe.
-if (write(pipeDescriptors[1], &ch, sizeof(ch)) != sizeof(ch))
-{
-// Assume the child process exited, breaking the pipe.
-break;
-}
-}
-while (ch != 'T');
-write(pipeDescriptors[1], &ch, sizeof(ch));
-// Close the write end of the pipe for the commander process (for
-//cleanup purposes).
-close(pipeDescriptors[1]);
-// Wait for the process manager to exit.
-wait(&result);
-}
-return result;
+    // TODO: Create a pipe
+    pipe(pipeDescriptors);
+    // USE fork() SYSTEM CALL to create the child process and save the value returned in processMgrPid variable
+    if ((processMgrPid = fork()) == -1)
+        exit(1); /* FORK FAILED */
+    if (processMgrPid == 0)
+    {
+        // The process manager process is running.
+        // Close the unused write end of the pipe for the process manager process.
+        close(pipeDescriptors[1]);
+        // Run the process manager.
+        result = runProcessManager(pipeDescriptors[0]);
+        // Close the read end of the pipe for the process manager process (for
+        // cleanup purposes).
+        close(pipeDescriptors[0]);
+        _exit(result);
+    }
+    else
+    {
+        // The commander process is running.
+        // Close the unused read end of the pipe for the commander process.
+        close(pipeDescriptors[0]);
+        // Loop until a 'T' is written or until the pipe is broken.
+        do
+        {
+            cout << "Enter Q, P, U or T" << endl;
+            cout << "$ ";
+            cin >> ch;
+            // Pass commands to the process manager process via the pipe.
+            if (write(pipeDescriptors[1], &ch, sizeof(ch)) != sizeof(ch))
+            {
+                // Assume the child process exited, breaking the pipe.
+                break;
+            }
+        } while (ch != 'T');
+        write(pipeDescriptors[1], &ch, sizeof(ch));
+        // Close the write end of the pipe for the commander process (for
+        // cleanup purposes).
+        close(pipeDescriptors[1]);
+        // Wait for the process manager to exit.
+        wait(&result);
+    }
+    return result;
 }
