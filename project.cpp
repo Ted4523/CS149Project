@@ -178,6 +178,7 @@ void schedule()
         
     }
     // 3. If we were able to get a new process to run:
+
     // a. Mark the processing as running (update the new process's PCB state)
     // b. Update the CPU structure with the PCB entry details(program, program counter, // value, etc.)
 }
@@ -186,8 +187,9 @@ void block()
 {
     // TODO: Implement
     // 1. Add the PCB index of the running process (stored in runningState) to the blocked queue.
-
+    
     // 2. Update the process's PCB entry
+    
     // a. Change the PCB's state to blocked.
     // b. Store the CPU program counter in the PCB's program counter.
     // c. Store the CPU's value in the PCB's value.
@@ -210,7 +212,9 @@ void fork(int value)
 {
     // TODO: Implement
     // 1. Get a free PCB index (pcbTable.size())
+ 
     // 2. Get the PCB entry for the current running process.
+
     // 3. Ensure the passed-in value is not out of bounds.
     // 4. Populate the PCB entry obtained in #1
     // a. Set the process ID to the PCB index obtained in #1.
