@@ -70,10 +70,11 @@ bool createProgram(const string &filename, vector<Instruction> &program)
         cout << "Error opening file " << filename << endl;
         return false;
     }
-    while (file.good())
+    while (file.good()) 
     {
         string line;
         getline(file, line);
+        
         trim(line);
         if (line.size() > 0)
         {
@@ -153,7 +154,8 @@ void decrement(int value)
 void schedule()
 {
     // TODO: Implement
-    // 1. Return if there is still a processing running (runningState != -1). There is no need to schedule if a process is already running (at least until iLab 3)
+    // 1. Return if there is still a processing running (runningState != -1). 
+    //There is no need to schedule if a process is already running (at least until iLab 3)
     if (runningState != -1)
     {
         return;
@@ -161,39 +163,40 @@ void schedule()
     // 2. Get a new process to run, if possible, from the ready queue.
     if (!readyState.empty())
     {
-        // a. Remove the front of the ready queue.
         int pcbIndex = readyState.front();
         readyState.pop_front();
-        // b. Update the running state to the PCB index of the new process.
-        pcbEntry[pcbIndex].state = STATE_RUNNING;
-        // c. Update the process's PCB entry to running.
-
+    // 3. If we were able to get a new process to run:
+    // a. Mark the processing as running (update the new process's PCB state)
+ 
         runningState = pcbIndex;
+        pcbEntry[pcbIndex].state = STATE_RUNNING;
+    // b. Update the CPU structure with the PCB entry details(program, program counter, // value, etc.)
 
-        // c. Update the process's PCB entry to running.
-        cpu.pProgram = &(pcbEntry[pcbIndex].program);
-        // d. Update the CPU structure with the PCB entry details (program, program counter, value, etc.)
+        cpu.pProgram = &(pcbEntry[pcbIndex].program); // this
         cpu.programCounter = pcbEntry[pcbIndex].programCounter;
         cpu.value = pcbEntry[pcbIndex].value;
         
     }
-    // 3. If we were able to get a new process to run:
-
-    // a. Mark the processing as running (update the new process's PCB state)
-    // b. Update the CPU structure with the PCB entry details(program, program counter, // value, etc.)
 }
 // Implements the B operation.
 void block()
 {
     // TODO: Implement
-    // 1. Add the PCB index of the running process (stored in runningState) to the blocked queue.
     
+    // 1. Add the PCB index of the running process (stored in runningState) to the blocked queue.
+    blockedState.push_back(runningState);
+
     // 2. Update the process's PCB entry
+    int pcbIndex = runningState;    
     
     // a. Change the PCB's state to blocked.
+    pcbEntry[pcbIndex].state = STATE_BLOCKED;
     // b. Store the CPU program counter in the PCB's program counter.
+    pcbEntry[pcbIndex].programCounter = cpu.programCounter;
     // c. Store the CPU's value in the PCB's value.
+    pcbEntry[pcbIndex].value = cpu.value;
     // 3. Update the running state to -1 (basically mark no process as running). Note that a new process will be chosen to run later
+    runningState = -1;
     // (via theQ command code calling the schedule() function).
 }
 // Implements the E operation.
@@ -201,10 +204,16 @@ void end()
 {
     // TODO: Implement
     // 1. Get the PCB entry of the running process.
+    int pcbIndex = runningState;
+    PcbEntry& process = pcbEntry[runningState]; 
     // 2. Update the cumulative time difference (increment it by
     // timestamp + 1 - start time of the process).
+    cumulativeTimeDiff += timestamp + 1- process.startTime;
     // 3. Increment the number of terminated processes.
+    numTerminatedProcesses++;
     // 4. Update the running state to -1 (basically mark no process as running).
+    runningState = -1;
+
     // Note that a new process will be chosen to run later (via the Q command code calling the schedule function).
 }
 // Implements the F operation.
@@ -212,33 +221,61 @@ void fork(int value)
 {
     // TODO: Implement
     // 1. Get a free PCB index (pcbTable.size())
+    vector<PcbEntry> pcbTable;
+    int freePcbIndex = pcbTable.size();
+    
  
     // 2. Get the PCB entry for the current running process.
-
+    int pcbIndex = runningState;
+    PcbEntry& parentProcess = pcbEntry[freePcbIndex];
     // 3. Ensure the passed-in value is not out of bounds.
+    if (value < 0 || value >= pcbTable.size())
+    {
+        cout << "Invalid value for fork operation" << endl;
+        return;
+    }
     // 4. Populate the PCB entry obtained in #1
+    
+
     // a. Set the process ID to the PCB index obtained in #1.
+    parentProcess.processId = freePcbIndex;
     // b. Set the parent process ID to the process ID of the
+    parentProcess.parentProcessId = pcbIndex;
     // running process (use the running process's PCB entry to get this).
     // c. Set the program counter to the cpu program counter.
+    parentProcess.programCounter = cpu.programCounter;
     // d. Set the value to the cpu value.
+    parentProcess.value = cpu.value;
     // e. Set the priority to the same as the parent process's priority.
+    parentProcess.priority = pcbEntry[pcbIndex].priority;
     // f. Set the state to the ready state.
+    parentProcess.state = STATE_READY;
     // g. Set the start time to the current timestamp
+    parentProcess.startTime = timestamp;
     // 5. Add the pcb index to the ready queue.
+    readyState.push_back(freePcbIndex);
     // 6. Increment the cpu's program counter by the value read in #3
+    cpu.programCounter += value;
 }
 // Implements the R operation.
 void replace(string &argument)
 {
     // TODO: Implement
     // 1. Clear the CPU's program (cpu.pProgram->clear()).
+    cpu.pProgram->clear();
     // 2. Use createProgram() to read in the filename specified by
     // argument into the CPU (*cpu.pProgram)
     // a. Consider what to do if createProgram fails. I printed an
     // error, incremented the cpu program counter and then returned. Note
     // that createProgram can fail if the file could not be opened or did not exist.
+    if (!createProgram(argument, *cpu.pProgram))
+    {
+        cout << "Error reading program file " << argument << endl;
+        cpu.programCounter++;
+        return;
+    }
     // 3. Set the program counter to 0.
+    cpu.programCounter = 0;
 
 }
 // Implements the Q command.
@@ -296,16 +333,64 @@ void unblock()
 {
     // 1. If the blocked queue contains any processes:
     // a. Remove a process form the front of the blocked queue.
+    if (!blockedState.empty())
+    {
+        int pcbIndex = blockedState.front();
+        blockedState.pop_front();
+    }
     // b. Add the process to the ready queue.
+    readyState.push_back(pcbIndex);
     // c. Change the state of the process to ready (update its PCB entry).
+    pcbEntry[pcbIndex].state = STATE_READY;
     // 2. Call the schedule() function to give an unblocked process a
     // chance to run (if possible).
-}
+    schedule();}
 // Implements the P command.
 void print()
 {
     cout << "Print command is not implemented until iLab 3" << endl;
-}
+    cout << "**************************************************************" << endl;
+   cout << "The current system state is as follows:" << endl;
+   cout << "**************************************************************" << endl;
+   cout << "Time: " << timestamp << endl;
+   cout << "Running Process: " << runningState << endl;
+   cout << "Ready Queue: ";
+   for (int i : readyState)
+       cout << i << " ";
+       cout << endl;
+       cout << "Blocked Queue: ";
+       for (int i : blockedState)
+           cout << i << " ";
+           cout << endl;
+           cout << "**************************************************************" << endl;
+           cout << "PCB Table:" << endl;
+           cout << "**************************************************************" << endl;
+           cout << "PID\tPPID\tState\tPriority\tStart Time\tTime Used" << endl;
+           for (int i = 0; i < pcbEntry.size(); i++)
+           {
+               cout << pcbEntry[i].processId << "\t" << pcbEntry[i].parentProcessId << "\t";
+               switch (pcbEntry[i].state)
+               {
+               case STATE_READY:
+                   cout << "Ready\t";
+                   break;
+               case STATE_RUNNING:
+                   cout << "Running\t";
+                   break;
+               case STATE_BLOCKED:
+                   cout << "Blocked\t";
+                   break;
+               }
+               cout << pcbEntry[i].priority << "\t" << pcbEntry[i].startTime << "\t" << pcbEntry[i].timeUsed << endl;
+           }
+           cout << "**************************************************************" << endl;
+           cout << "CPU:" << endl;
+           cout << "**************************************************************" << endl;
+           cout << "Program Counter: " << cpu.programCounter << endl;
+           cout << "Value: " << cpu.value << endl;
+           cout << "Time Slice: " << cpu.timeSlice << endl;
+           cout << "Time Slice Used: " << cpu.timeSliceUsed << endl;
+           cout << "**************************************************************" << endl;
 // Function that implements the process manager.
 int runProcessManager(int fileDescriptor)
 {
@@ -330,6 +415,7 @@ int runProcessManager(int fileDescriptor)
     timestamp = 0;
     double avgTurnaroundTime = 0;
     // Loop until a 'T' is read, then terminate.
+
     char ch;
     do
     {
