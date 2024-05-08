@@ -17,24 +17,11 @@ using namespace std;
 #include <cctype>
 #include <locale>
 
-// trim from start (in place)
-static inline void ltrim(std::string &s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }));
-}
+string trim(const std::string &s) {
+    size_t start = s.find_first_not_of(" \t\n\r\f\v");
+    size_t end = s.find_last_not_of(" \t\n\r\f\v");
 
-// trim from end (in place)
-static inline void rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }).base(), s.end());
-}
-
-// trim from both ends (in place)
-static inline void trim(std::string &s) {
-    ltrim(s);
-    rtrim(s);
+    return (start == std::string::npos) ? "" : s.substr(start, end - start + 1);
 }
 //************************************************************************
 
@@ -86,74 +73,7 @@ deque<int> blockedState;
 // simpler since table slots and process IDs are never re-used.
 double cumulativeTimeDiff = 0;
 int numTerminatedProcesses = 0;
-bool createProgram(const string &filename, vector<Instruction> &program)
-{
-    ifstream file;
-    int lineNum = 0;
-    file.open(filename.c_str());
-    if (!file.is_open())
-    {
-        cout << "Error opening file " << filename << endl;
-        return false;
-    }
-    while (file.good()) 
-    {
-        string line;
-        getline(file, line);
-        
-        trim(line);
-        if (line.size() > 0)
-        {
-            Instruction instruction;
-            instruction.operation = toupper(line[0]);
-            //instruction.stringArg = trim(line.erase(0, 1));
-            line.erase(0, 1);
-            trim(line);
 
-            stringstream argStream(instruction.stringArg);
-            switch (instruction.operation)
-            {
-            case 'S': // Integer argument.
-            case 'A': // Integer argument.
-            case 'D': // Integer argument.
-            case 'F': // Integer argument.
-                if (!(argStream >> instruction.intArg))
-                {
-                    cout << filename << ":" << lineNum
-                         << " - Invalid integer argument "
-                         << instruction.stringArg << " for "
-                         << instruction.operation << " operation"
-                         << endl;
-                    file.close();
-                    return false;
-                }
-                break;
-            case 'B': // No argument.
-            case 'E': // No argument.
-                break;
-            case 'R': // String argument.
-                      // Note that since the string is trimmed on both ends, filenames
-                      // with leading or trailing whitespace (unlikely) will not work.
-                if (instruction.stringArg.size() == 0)
-                {
-                    cout << filename << ":" << lineNum << " - Missing string argument" << endl;
-                    file.close();
-                    return false;
-                }
-                break;
-            default:
-                cout << filename << ":" << lineNum << " - Invalid operation, "
-                     << instruction.operation << endl;
-                file.close();
-                return false;
-            }
-            program.push_back(instruction);
-        }
-        lineNum++;
-    }
-    file.close();
-    return true;
-}
 // Implements the S operation.
 void set(int value)
 {
@@ -245,7 +165,82 @@ void end()
 
     // Note that a new process will be chosen to run later (via the Q command code calling the schedule function).
 }
-// Implements the F operation.
+bool createProgram(const string &filename, vector<Instruction> &program)
+{
+    ifstream file;
+    int lineNum = 0;
+    file.open(filename.c_str());
+    if (!file.is_open())
+    {
+        cout << "Error opening file " << filename << endl;
+        return false;
+    }
+    while (file.good()) 
+    {
+        string line;
+        getline(file, line);
+        
+        trim(line);
+        if (line.size() > 0)
+        {
+            Instruction instruction;
+            instruction.operation = toupper(line[0]);
+            instruction.stringArg = trim(line.erase(0, 1));
+            line.erase(0, 1);
+            trim(line);
+
+            stringstream argStream(instruction.stringArg);
+            switch (instruction.operation)
+            {
+            case 'S': 
+                set(instruction.intArg);
+                break;// Integer argument.  
+            case 'A': 
+                add(instruction.intArg);// Integer argument.
+                break;
+            case 'D': 
+                decrement(instruction.intArg);// Integer argument.
+                break;
+            case 'F': 
+                 // Integer argument.
+                if (!(argStream >> instruction.intArg))
+                {
+                    cout << filename << ":" << lineNum
+                         << " - Invalid integer argument "
+                         << instruction.stringArg << " for "
+                         << instruction.operation << " operation"
+                         << endl;
+                    file.close();
+                    return false;
+                }
+                break;
+            case 'B': // No argument.
+            case 'E': // No argument.
+                break;
+            case 'R': // String argument.
+                      // Note that since the string is trimmed on both ends, filenames
+                      // with leading or trailing whitespace (unlikely) will not work.
+                if (instruction.stringArg.size() == 0)
+                {
+                    cout << filename << ":" << lineNum << " - Missing string argument" << endl;
+                    file.close();
+                    return false;
+                }
+                break;
+            default:
+                cout << filename << ":" << lineNum << " - Invalid operation, "
+                     << instruction.operation << endl;
+                file.close();
+                return false;
+            }
+            program.push_back(instruction);
+        }
+        lineNum++;
+    }
+    file.close();
+    return true;
+}
+//Implements F
 void fork(int value)
 {
     // TODO: Implement
@@ -455,16 +450,20 @@ int runProcessManager(int fileDescriptor)
             quantum();
             break;
         case 'U':
-            cout << "You entered U" << endl;
+            cout << "You entered U, processes have been unblocked" << endl;
+            unblock();
             break;
         case 'P':
-            cout << "You entered P" << endl;
+            print();
+            break;
+        case 'T':
             break;
         default:
             cout << "You entered an invalid character!" << endl;
         }
     } while (ch != 'T');
     // Print the final system state.
+    print();
     
     
     return EXIT_SUCCESS;
