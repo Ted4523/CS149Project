@@ -10,6 +10,7 @@
 #include <sys/wait.h> // for wait()
 #include <unistd.h>   // for pipe(), read(), write(), close(), fork(), and _exit()
 #include <vector>     // for vector (used for PCB table)
+#include "project.h"
 
 using namespace std;
 
@@ -25,41 +26,7 @@ string trim(const std::string &s) {
 }
 //************************************************************************
 
-class Instruction
-{
-public:
-    char operation;
-    int intArg;
-    string stringArg;
-};
-class Cpu
-{
-public:
-    vector<Instruction> *pProgram;
-    int programCounter;
-    int value;
-    int timeSlice;
-    int timeSliceUsed;
-};
-enum State
-{
-    STATE_READY,
-    STATE_RUNNING,
-    STATE_BLOCKED
-};
-class PcbEntry
-{
-public:
-    int processId;
-    int parentProcessId;
-    vector<Instruction> program;
-    unsigned int programCounter;
-    int value;
-    unsigned int priority;
-    State state;
-    unsigned int startTime;
-    unsigned int timeUsed;
-};
+
 PcbEntry pcbEntry[10];
 unsigned int timestamp = 0;
 Cpu cpu;
@@ -245,7 +212,6 @@ void fork(int value)
 {
     // TODO: Implement
     // 1. Get a free PCB index (pcbTable.size())
-    vector<PcbEntry> pcbTable;
     int pcbIndex = pcbTable.size();
 
     
@@ -407,6 +373,8 @@ void print()
    cout << endl;
 }
 
+void totalTerminatedProcess() {
+}
 // Function that implements the process manager.
 int runProcessManager(int fileDescriptor)
 {
@@ -429,8 +397,8 @@ int runProcessManager(int fileDescriptor)
     cpu.programCounter = pcbEntry[0].programCounter;
     cpu.value = pcbEntry[0].value;
     timestamp = 0;
-    double avgTurnaroundTime = 0;
-    
+    programIndexCounter = 0;
+    avgTurnaroundTime = 0;
     // Loop until a 'T' is read, then terminate
 
 
@@ -463,10 +431,21 @@ int runProcessManager(int fileDescriptor)
         }
     } while (ch != 'T');
     // Print the final system state.
+    cout << "Final System State" << endl;
     print();
+    avgTTime();
+
     
     
     return EXIT_SUCCESS;
+}
+void avgTTime() {
+    int totalTime = 0;
+    for(int h = 0; h <= programIndexCounter; h++){
+        totalTime += pcbTable[h].timeUsed;
+    }
+    avgTurnaroundTime = totalTime / (double) programIndexCounter;
+    cout << "Average turnaround time: " << avgTurnaroundTime << endl;
 }
 int main(int argc, char *argv[])
 {
